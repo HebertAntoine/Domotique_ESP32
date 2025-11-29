@@ -1,51 +1,70 @@
-// my_accessory.c
-#include <homekit/homekit.h>
-#include <homekit/characteristics.h>
 #include <stdio.h>
+#include "homekit/homekit.h"
+#include "homekit/characteristics.h"
 
-// Fonction d'identification (appelée quand tu cliques sur "Identifier" dans Maison)
+// --------- Caractéristiques globales (utilisées dans le .ino) ---------
+
+homekit_characteristic_t cha_current_temperature =
+    HOMEKIT_CHARACTERISTIC_(CURRENT_TEMPERATURE, 0.0);
+
+homekit_characteristic_t cha_current_humidity =
+    HOMEKIT_CHARACTERISTIC_(CURRENT_RELATIVE_HUMIDITY, 0.0);
+
+// --------- Fonction Identify (quand tu appuies sur "Identifier" dans Maison) ---------
+
 void accessory_identify(homekit_value_t _value) {
     printf("Accessory identify\n");
 }
 
-// Caractéristique de température (celle qu'on mettra à jour depuis l'ESP8266)
-homekit_characteristic_t cha_current_temperature = HOMEKIT_CHARACTERISTIC_(
-    CURRENT_TEMPERATURE,
-    0.0
-);
+// --------- Définition de l’accessoire HomeKit ---------
 
-// Nom de l’accessoire (visible dans Maison)
-homekit_characteristic_t cha_name = HOMEKIT_CHARACTERISTIC_(NAME, "Capteur DHT11");
-
-// Définition de l’accessoire HomeKit
 homekit_accessory_t *accessories[] = {
     HOMEKIT_ACCESSORY(
         .id = 1,
         .category = homekit_accessory_category_sensor,
-        .services = (homekit_service_t*[]) {
-            // Service info
-            HOMEKIT_SERVICE(ACCESSORY_INFORMATION, .characteristics = (homekit_characteristic_t*[]) {
-                HOMEKIT_CHARACTERISTIC(NAME, "Capteur Température"),
-                HOMEKIT_CHARACTERISTIC(MANUFACTURER, "Antoine"),
-                HOMEKIT_CHARACTERISTIC(SERIAL_NUMBER, "0001"),
-                HOMEKIT_CHARACTERISTIC(MODEL, "ESP8266-DHT11"),
-                HOMEKIT_CHARACTERISTIC(FIRMWARE_REVISION, "1.0"),
-                HOMEKIT_CHARACTERISTIC(IDENTIFY, accessory_identify),
-                NULL
-            }),
-            // Service capteur de température
-            HOMEKIT_SERVICE(TEMPERATURE_SENSOR, .primary = true, .characteristics = (homekit_characteristic_t*[]) {
-                &cha_current_temperature,
-                NULL
-            }),
+        .services = (homekit_service_t*[]){
+            // Service Info Accessoire
+            HOMEKIT_SERVICE(
+                ACCESSORY_INFORMATION,
+                .characteristics = (homekit_characteristic_t*[]){
+                    HOMEKIT_CHARACTERISTIC(NAME, "Capteur DHT11"),
+                    HOMEKIT_CHARACTERISTIC(MANUFACTURER, "DIY"),
+                    HOMEKIT_CHARACTERISTIC(SERIAL_NUMBER, "001"),
+                    HOMEKIT_CHARACTERISTIC(MODEL, "ESP8266-DHT11"),
+                    HOMEKIT_CHARACTERISTIC(FIRMWARE_REVISION, "1.0"),
+                    HOMEKIT_CHARACTERISTIC(IDENTIFY, accessory_identify),
+                    NULL
+                }
+            ),
+
+            // Service Température (service principal)
+            HOMEKIT_SERVICE(
+                TEMPERATURE_SENSOR,
+                .primary = true,
+                .characteristics = (homekit_characteristic_t*[]){
+                    &cha_current_temperature,
+                    NULL
+                }
+            ),
+
+            // Service Humidité
+            HOMEKIT_SERVICE(
+                HUMIDITY_SENSOR,
+                .characteristics = (homekit_characteristic_t*[]){
+                    &cha_current_humidity,
+                    NULL
+                }
+            ),
+
             NULL
-        }),
+        }
+    ),
     NULL
 };
 
-// Configuration du serveur HomeKit
+// --------- Configuration HomeKit (code de jumelage) ---------
+
 homekit_server_config_t config = {
     .accessories = accessories,
-    // Code HomeKit à entrer dans l'app Maison :
-    .password = "111-11-111",
+    .password = "111-11-111",   // code que tu rentreras dans l’app Maison
 };

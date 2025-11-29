@@ -1,13 +1,13 @@
 #include <Arduino.h>
 #include <ESP8266WiFi.h>
 
-// WiFiManager pour portail de config Wi-Fi (pop-up / page de config)
+// WiFiManager pour portail de config Wi-Fi
 #include <DNSServer.h>
 #include <ESP8266WebServer.h>
 #include <WiFiManager.h>
 
-#include <DHT.h>
 #include <arduino_homekit_server.h>
+#include <DHT.h>
 
 // ------------ DHT11 ------------
 #define DHTPIN D3        // D3 = GPIO0 sur NodeMCU
@@ -28,13 +28,11 @@ extern "C" {
 // ------------ Variables ------------
 unsigned long next_measure_ms = 0;
 
-// ------------ Portail Wi-Fi (WiFiManager) ------------
+// ------------ Portail Wi-Fi (pop-up) ------------
 void wifi_setup_with_portal() {
-  WiFi.mode(WIFI_STA);   // mode station uniquement
+  WiFi.mode(WIFI_STA);
 
   WiFiManager wm;
-
-  // Nom du réseau WiFi de config qui va apparaître
   bool res = wm.autoConnect("DHT11_Setup");
 
   if (!res) {
@@ -54,8 +52,8 @@ void wifi_setup_with_portal() {
 void setup() {
   Serial.begin(115200);
   delay(1000);
-  Serial.println();
-  Serial.println("==== DHT11 + Temp + Humidité + HomeKit (ESP8266) ====");
+
+  Serial.println("==== DHT11 + HomeKit (ESP8266) ====");
 
   dht.begin();
 
@@ -67,9 +65,9 @@ void setup() {
 }
 
 // ------------ Lecture capteur + notif HomeKit ------------
-void update_sensors() {
-  float t = dht.readTemperature();   // °C
-  float h = dht.readHumidity();      // %
+void update_sensor() {
+  float t = dht.readTemperature();
+  float h = dht.readHumidity();
 
   if (isnan(t) || isnan(h)) {
     Serial.println("Erreur lecture DHT11");
@@ -78,11 +76,13 @@ void update_sensors() {
 
   Serial.print("Température = ");
   Serial.print(t);
-  Serial.print(" °C | Humidité = ");
+  Serial.println(" °C");
+
+  Serial.print("Humidité = ");
   Serial.print(h);
   Serial.println(" %");
 
-  // Mise à jour HomeKit
+  // --- HomeKit ---
   cha_current_temperature.value.float_value = t;
   homekit_characteristic_notify(&cha_current_temperature, cha_current_temperature.value);
 
@@ -92,12 +92,12 @@ void update_sensors() {
 
 // ------------ Loop ------------
 void loop() {
-  arduino_homekit_loop();   // doit être appelé très souvent
+  arduino_homekit_loop();
 
   unsigned long now = millis();
   if (now > next_measure_ms) {
-    next_measure_ms = now + 5000;  // toutes les 5 secondes
-    update_sensors();
+    next_measure_ms = now + 5000;   // toutes les 5 secondes
+    update_sensor();
   }
 
   delay(10);
